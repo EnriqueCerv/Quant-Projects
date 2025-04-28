@@ -71,7 +71,7 @@ def regression_training(X_train: pd.DataFrame,
     if model_type == 'RF':
         model = RandomForestRegressor(n_estimators=100, min_samples_split=100, max_depth=None)
     elif model_type == 'NN':
-        model = MLPRegressor(hidden_layer_sizes=(100, ), max_iter=500)
+        model = MLPRegressor(hidden_layer_sizes=(50, 2), max_iter=500)
     
     model.fit(X_train, y_train)
 
