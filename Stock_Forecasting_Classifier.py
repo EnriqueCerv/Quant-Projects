@@ -109,7 +109,7 @@ def classifier_eval(model,
 
     return y_pred, precision, accuracy
 
-def master_classifier(ticker: str, model_type: str, graph: bool = True, crop: bool = True):
+def master_classifier(ticker: str, model_type: str, graph: bool = True, crop: bool = False):
     # Loading data and making target
     ticker_df = load_data(ticker, graph = graph, crop=crop)
     ticker_df = target_prep_classifier(ticker_df)
@@ -131,3 +131,5 @@ def master_classifier(ticker: str, model_type: str, graph: bool = True, crop: bo
 
     return y_pred
 # %%
+
+master_classifier('AAPL', 'RF')
