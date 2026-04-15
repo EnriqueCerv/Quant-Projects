@@ -1,4 +1,5 @@
 # %%
+import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -7,16 +8,22 @@ import seaborn as sns
 from allocators.hrp import hrp_portfolio
 from allocators.mean_variance import mean_variance_portfolio
 from allocators.min_variance import min_variance_portfolio
+from allocators.inverse_variance import inverse_variance_portfolio
+from allocators.risk_parity import risk_parity_portfolio
+from stats import summary_table
 # %%
 
+# The different portfolio allocator methods
 portfolio_dict = {
     'hrp': hrp_portfolio,
+    'risk_parity': risk_parity_portfolio,
     'mean_variance': mean_variance_portfolio,
-    'min_variance': min_variance_portfolio
+    'min_variance': min_variance_portfolio,
+    'inverse_variance': inverse_variance_portfolio
 }
 
 
-def backtest_cum_returns(
+def backtest_returns(
         returns: pd.DataFrame,
         lookback: int = 126,
         rebalance_freq: int = 21,
@@ -35,7 +42,10 @@ def backtest_cum_returns(
     # Get optimized portfolio returns
     optimized_returns, avg_turnover = backtest_portfolio(returns, rolling_weights, rebalance_freq=rebalance_freq, cost_bps=cost_bps)
 
-    return optimized_returns, avg_turnover
+    # Get portfolio cumulative returns
+    cum_optimized_returns = (1 + optimized_returns).cumprod()
+
+    return optimized_returns, avg_turnover, cum_optimized_returns
 
 
 # %%
@@ -72,31 +82,6 @@ def compute_rolling_weights(
 
     return pd.DataFrame(weights, index = dates)
 
-
-# # # # # # # # # # # # #
-# Backtest
-# # # # # # # # # # # # #
-# def backtest_portfolio(
-#         returns: pd.DataFrame,
-#         weights: pd.DataFrame,
-#         rebalance_freq: int = 21
-#     ):
-#     """
-#     Input: Returns, weights of stock and rebalancing frequency
-#     Output: DataFrame of optimized portfolio returns as given by optimized weights in each time period
-#     """
-#     portfolio_returns = []
-#     for i in range(len(weights) - 1):
-#         start = returns.index.get_loc(weights.index[i])
-#         end = start + rebalance_freq
-
-#         window_returns = returns.iloc[start:end]
-#         w = weights.iloc[i].values
-
-#         portfolio_returns.append(window_returns @ w)
-    
-#     return pd.concat(portfolio_returns)
-
 # # # # # # # # # # # # #
 # Backtest with turnover
 # # # # # # # # # # # # #
@@ -107,7 +92,7 @@ def backtest_portfolio(
         cost_bps: float
     ):
     """
-    Input: Returns, weights of stock and rebalancing frequency
+    Input: Returns, weights of stock, rebalancing frequency and turnover cost 5-10 for moderate, 20-30 for extreme
     Output: DataFrame of optimized portfolio returns as given by optimized weights in each time period
             minus the turnover cost between rebalances
     """
@@ -134,41 +119,18 @@ def backtest_portfolio(
     
     return pd.concat(portfolio_returns), np.mean(turnovers)
 
-# # # # # # # # # # # # #
-# Eval backtest
-# # # # # # # # # # # # #
-def performance_stats(r, avg_turnover = None):
-    return pd.Series({
-        "Annual Return": (1 + r).prod() ** (252 / len(r)) - 1,
-        "Annual Vol": r.std() * np.sqrt(252),
-        "Sharpe": (r.mean() / r.std()) * np.sqrt(252),
-        "Max Drawdown": ((1 + r).cumprod() / (1 + r).cumprod().cummax() - 1).min(),
-        "Avg Turnover": avg_turnover * 12 if avg_turnover else 0
-    })
 # %%
-
 if __name__ == '__main__':
     from data import returns
 
-    # Benchmarks 
-    equal_weights = np.ones(len(returns.columns)) / len(returns.columns)
-    equal_portfolio_returns = returns @ equal_weights
-    equal_stats = performance_stats(equal_portfolio_returns)
-    print('Equal Portfolio stats')
-    print(equal_stats, '\n')
-    equal_portfolio_cum_returns = (1 + equal_portfolio_returns).cumprod()
-
-    voo_returns = returns['VOO']
-    voo_cum_returns = (1 + voo_returns).cumprod()
-    voo_stats = performance_stats(equal_portfolio_returns)
-    print('VOO stats')
-    print(voo_stats, '\n')
-
+    # # # # # # # # # # # #
     # Get returns and turnover
+    # # # # # # # # # # # #
+
     cost_bps = 10
     
     # HRP
-    hrp_returns, hrp_avg_turnover = backtest_cum_returns(
+    hrp_returns, hrp_avg_turnover, hrp_cum_returns = backtest_returns(
         returns,
         lookback=126, 
         rebalance_freq=21, 
@@ -177,30 +139,33 @@ if __name__ == '__main__':
         lw = True, 
         plot = False
         )
-    hrp_stats = performance_stats(hrp_returns, hrp_avg_turnover)
-    print('HRP stats')
-    print(hrp_stats, '\n')
-    hrp_cum_returns = (1 + hrp_returns).cumprod()
+    
+    # Equal risk parity
+    risk_parity_returns, risk_parity_avg_turnover, risk_parity_cum_returns = backtest_returns(
+        returns, 
+        lookback=126, 
+        rebalance_freq=21, 
+        cost_bps = cost_bps,
+        portfolio='risk_parity',
+        lw = True,
+        plot = False
+    )
 
     # Mean-variance
-    mean_variance_returns, mean_variance_avg_turnover = backtest_cum_returns(
+    mean_variance_returns, mean_variance_avg_turnover, mean_variance_cum_returns = backtest_returns(
         returns, 
         lookback=126, 
         rebalance_freq=21, 
         cost_bps = cost_bps,
         portfolio='mean_variance',
-        lambda_risk = 0.5, 
+        lambda_risk = 1, 
         lw = True, 
         shrink = 0.3, 
         plot = False
         )
-    mean_variance_stats = performance_stats(mean_variance_returns, mean_variance_avg_turnover)
-    print('Mean-variance stats')
-    print(mean_variance_stats, '\n')
-    mean_variance_cum_returns = (1 + mean_variance_returns).cumprod()
     
     # Min-variance
-    min_variance_returns, min_variance_avg_turnover = backtest_cum_returns(
+    min_variance_returns, min_variance_avg_turnover, min_variance_cum_returns = backtest_returns(
         returns, 
         lookback=126, 
         rebalance_freq=21, 
@@ -209,18 +174,77 @@ if __name__ == '__main__':
         lw = True,
         plot = False
     )
-    min_variance_stats = performance_stats(min_variance_returns, min_variance_avg_turnover)
-    print('Min-variance stats')
-    print(min_variance_stats, '\n')
-    min_variance_cum_returns = (1 + min_variance_returns).cumprod()
+    
+    # Inverse variance
+    inverse_variance_returns, inverse_variance_avg_turnover, inverse_variance_cum_returns = backtest_returns(
+        returns, 
+        lookback=126, 
+        rebalance_freq=21, 
+        cost_bps = cost_bps,
+        portfolio='inverse_variance',
+        lw = True,
+        plot = False
+    )
 
-    # Plot comparison
-    plt.figure(figsize=(10,6))
+    # Trim benchmarks to backtest start date
+    backtest_start = hrp_cum_returns.index[0]
+    backtest_end = hrp_cum_returns.index[-1]
+
+    equal_weights = np.ones(len(returns.columns)) / len(returns.columns)
+    equal_portfolio_returns = (returns @ equal_weights)[backtest_start:backtest_end]
+    equal_portfolio_cum_returns = (1 + equal_portfolio_returns).cumprod()
+
+    voo_returns = returns['VOO'][backtest_start:backtest_end]
+    voo_cum_returns = (1 + voo_returns).cumprod()
+
+
+    # # # # # # # # # # # #
+    # Get summary table comparing strats
+    # # # # # # # # # # # #
+         
+    # Compile {strat : strat_return } dictionary
+    returns_dict = {
+        'HRP': hrp_returns,
+        'Risk Parity': risk_parity_returns,
+        'Mean-Variance': mean_variance_returns,
+        'Min-Variance': min_variance_returns,
+        'Inverse-Variance': inverse_variance_returns,
+        'Equal Weight': equal_portfolio_returns,
+        'VOO': voo_returns,
+    }
+
+    # Compile {strat : turnover} dict
+    turnovers_dict = {
+        'HRP': hrp_avg_turnover,
+        'Risk Parity': risk_parity_avg_turnover,
+        'Mean-Variance': mean_variance_avg_turnover,
+        'Min-Variance': min_variance_avg_turnover,
+        'Inverse-Variance': inverse_variance_avg_turnover,
+        'Equal Weight': 0,
+        'VOO': 0,
+    }
+
+    # Get stats:
+    stats_table, bootstrap_sharpes = summary_table(returns_dict=returns_dict, turnovers_dict=turnovers_dict)
+    print(stats_table.T)
+
+    # # # # # # # # # # # #
+    # Plot and save comparisons
+    # # # # # # # # # # # #
+    plt.figure(figsize=(12, 6))
     hrp_cum_returns.plot(label='HRP portfolio')
+    risk_parity_cum_returns.plot(label='Risk Parity portfolio')
     mean_variance_cum_returns.plot(label='Mean-variance portfolio')
     min_variance_cum_returns.plot(label='Min-variance portfolio')
+    inverse_variance_cum_returns.plot(label='Inverse-variance portfolio')
     equal_portfolio_cum_returns.plot(label='Equal weight portfolio')
     voo_cum_returns.plot(label='VOO')
     plt.legend()
     plt.title('Out-of-sample backtest')
-    plt.show()
+    plt.xticks(rotation=5)
+    plt.tight_layout()
+    
+    RESULTS_DIR = os.path.join(os.path.dirname(__file__), '..', 'results')
+    os.makedirs(RESULTS_DIR, exist_ok=True)
+
+    plt.savefig(os.path.join(RESULTS_DIR, 'oos_backtest_comparison.png'))

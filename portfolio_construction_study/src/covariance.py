@@ -54,7 +54,7 @@ def returns_mean(returns: pd.DataFrame, shrink: float, plot: bool):
 # %%
 if __name__ == '__main__':
 
-    from data import returns
+    from src.data import returns
 
     lw_sigma, lw_corr = returns_corr_cov(returns, lw=True, plot=True)
     sigma, corr = returns_corr_cov(returns, lw=False, plot=True)

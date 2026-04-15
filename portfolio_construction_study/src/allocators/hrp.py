@@ -206,7 +206,7 @@ def get_inverse_variance(covariance):
 # %%
 
 if __name__ == '__main__':
-    from data import returns
+    from src.data import returns
     optimized_weights = hrp_portfolio(returns)
     optimized_weights.sort_values().plot(kind='barh', title=f'HRP Portfolio Weights', figsize=(8,5))
 

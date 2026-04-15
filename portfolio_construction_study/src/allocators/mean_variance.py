@@ -25,8 +25,12 @@ def mean_variance_portfolio(
     cov_matrix, _ = returns_corr_cov(returns, lw=lw, plot=plot)
     exp_returns = returns_mean(returns, shrink=shrink, plot=plot)
 
+    # Annualise so lambda_risk is on an interpretable scale
+    cov_matrix_annual = cov_matrix * 252
+    exp_returns_annual = exp_returns * 252
+
     # Get optimized weights 
-    optimized_weights = mean_variance(cov_matrix, exp_returns, lambda_risk, plot=plot)
+    optimized_weights = mean_variance(cov_matrix_annual, exp_returns_annual, lambda_risk, plot=plot)
 
     return optimized_weights
 
@@ -61,10 +65,8 @@ def mean_variance(cov_matrix: pd.DataFrame, exp_returns: pd.DataFrame, lambda_ri
 # %%
 
 if __name__ == '__main__':
-    from data import returns
+    from src.data import returns
     lambda_risk = 1
     optimized_weights = mean_variance_portfolio(returns, lambda_risk=lambda_risk)    
     optimized_weights.sort_values().plot(kind='barh', title=f'Mean-Variance Portfolio Weights, lambda = {lambda_risk}', figsize=(8,5))
     print(optimized_weights)
-
-# %%

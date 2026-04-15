@@ -58,9 +58,7 @@ def min_variance(cov_matrix: pd.DataFrame, plot: bool) -> pd.Series:
 # %%
 
 if __name__ == '__main__':
-    from data import returns
+    from src.data import returns
     optimized_weights = min_variance_portfolio(returns)
     print(optimized_weights)
     optimized_weights.sort_values().plot(kind='barh', title='Min Risk Portfolio weights', figsize=(8,5))
-
-# %%
