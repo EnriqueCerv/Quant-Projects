@@ -29,7 +29,7 @@ def load_stock(ticker: str, period: str = 'max', plot: bool = True) -> pd.DataFr
 
 # Enrique global tickers, need to separate by exchange
 # tickers = ['VOO', 'CSP1.L', 'VWRA.L', 'AAPL', 'MSFT', 'SWRD.L', 'SMH', 'TSM', 'AMD', 'BOTZ', 'PWRD', 'NVDA', 'NUCL.L']
-# tickers = ['VOO', 'AAPL', 'SMH', 'TSM', 'NVDA', 'MSFT', 'AMD', 'BOTZ', 'PWRD', 'NLR']
+tickers = ['VOO', 'AAPL', 'SMH', 'TSM', 'NVDA', 'MSFT', 'AMD', 'BOTZ', 'PWRD', 'NLR']
 
 # defense_tickers = ['LMT', 'RTX', 'GD', 'NOC']
 # tickers += defense_tickers
@@ -37,7 +37,7 @@ def load_stock(ticker: str, period: str = 'max', plot: bool = True) -> pd.DataFr
 # big_companies = ['AMZN', 'GOOG', 'TSLA', 'JPM', 'META']
 # tickers += big_companies
 
-tickers = ['IVV', 'IBKR', 'BOTZ', 'PWRD', 'RPG', 'QQQ', 'VUG', 'XLK', 'VOO', 'SMH']
+# tickers = ['IVV', 'IBKR', 'BOTZ', 'PWRD', 'RPG', 'QQQ', 'VUG', 'XLK', 'VOO', 'SMH']
 # tickers = ['IONQ', 'IBKR', 'MSFT', 'AAPL', 'NVDA', 'TSM', 'SMH', 'VOO', 'GOOG']
 
 data = {ticker: load_stock(ticker, period='5y', plot=True) for ticker in tickers}
@@ -185,7 +185,7 @@ def rolling_min_var_weights(
     return pd.DataFrame(weights, index = dates)
 
 W = rolling_min_var_weights(
-    returns=returns, shrink=0.3, lambda_risk=2
+    returns=returns, shrink=0.3, lambda_risk=0.5
     )
 # %%
 # # # # # # # # # # # # #
